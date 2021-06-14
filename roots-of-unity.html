@@ -228,11 +228,11 @@
                 },
                 onSubmit() {
                     const n = parseInt(this.newGroup)
-                    if (n) {
+                    if (n > 0) {
                         this.savedGroups.push(n)
-                        this.newGroup = ''
                         this.saveData()
                     }
+                    this.newGroup = ''
                 },
                 onRemoveGroup(index) {
                     this.savedGroups.splice(index, 1)
