@@ -174,7 +174,6 @@
                     xCenter: 0,
                     yCenter: 0,
                     mouseAngle: 0,
-                    groupSize: 80,
                     rootSize: 8,
                     colors: {
                         bg: 'rgb(245, 245, 220)',
@@ -188,6 +187,10 @@
                 }
             },
             computed: {
+                groupSize() {
+                    const minSize = Math.min(this.width, this.height)
+                    return Math.min(100, minSize * 0.8 / this.savedGroups.length / 2)
+                },
                 groups() {
                     return this.savedGroups.sort((x, y) => x - y).map((n, groupIndex) => {
                         const group = {
