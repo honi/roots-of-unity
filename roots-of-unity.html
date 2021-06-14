@@ -204,7 +204,8 @@
                             const angle = group.angle * root
                             const x = r => this.xCenter + r * Math.cos(-angle)
                             const y = r => this.yCenter + r * Math.sin(-angle)
-                            const textAnchor = {1: 'start', 2: 'end', 3: 'end', 4: 'start'}[getQuadrant(angle)]
+                            let textAnchor = {1: 'start', 2: 'end', 3: 'end', 4: 'start'}[getQuadrant(angle)]
+                            if (angle % (Math.PI / 2) == 0) textAnchor = 'middle'
                             return {
                                 angle,
                                 k: root,
