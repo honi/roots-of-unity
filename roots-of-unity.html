@@ -1,0 +1,263 @@
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raíces n-ésimas de la unidad</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            background: rgb(245, 245, 220);
+            color: rgb(80, 80, 80);
+            font: 16px/20px 'Ubuntu Mono', monospace;
+        }
+        h1 {
+            font-size: 20px;
+            font-weight: normal;
+            margin: 0;
+        }
+        h2 {
+            font: inherit;
+            margin: 0;
+        }
+        .controls {
+            position: absolute;
+            left: 32px;
+            top: 32px;
+        }
+        .controls > :not(:first-child) {
+            margin-top: 8px;
+        }
+        form {
+            display: flex;
+        }
+        input {
+            flex-grow: 1;
+            margin-right: 8px;
+            padding: 8px;
+            font: inherit;
+            border: none;
+            background: rgba(0, 0, 0, 0.05);
+        }
+        button {
+            padding: 8px;
+            font: inherit;
+            border: none;
+            background: rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+        }
+        button:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        .group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .remove {
+            opacity: 0.5;
+            cursor: pointer;
+        }
+        .remove:hover {
+            opacity: 1;
+        }
+        .group-name {
+            flex-grow: 1;
+            margin: 0 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="controls">
+            <h1>Raíces n-ésimas de la unidad</h1>
+            <h2>Grupos</h2>
+            <div v-for="group, index in groups" class="group">
+                <div class="dot" :style="{backgroundColor: group.color}"></div>
+                <div class="group-name">{{ group.n }}</div>
+                <div @click="onRemoveGroup(index)" class="remove">[X]</div>
+            </div>
+            <form @submit.prevent="onSubmit">
+                <input v-model="newGroup" type="number" placeholder="Agregar grupo">
+                <button type="submit">Agregar</button>
+            </form>
+        </div>
+        <svg :width="width" :height="height" @mousemove="onMousemove">
+            <!-- Axis -->
+            <line
+                :x1="xCenter"
+                :y1="0"
+                :x2="xCenter"
+                :y2="height"
+                :stroke="colors.black"
+                stroke-opacity="0.2"
+                stroke-width="1"
+            />
+            <line
+                :x1="0"
+                :y1="yCenter"
+                :x2="width"
+                :y2="yCenter"
+                :stroke="colors.black"
+                stroke-opacity="0.2"
+                stroke-width="1"
+            />
+            <!-- Groups -->
+            <g v-for="group in groups">
+                <!-- Group container circle -->
+                <circle
+                    :r="group.r"
+                    :cx="xCenter"
+                    :cy="yCenter"
+                    fill="transparent"
+                    :stroke="colors.black"
+                    stroke-opacity="0.5"
+                    stroke-width="3"
+                />
+                <!-- Root highlight -->
+                <circle
+                    v-for="root in group.roots"
+                    :r="root.r * 2"
+                    :cx="root.x"
+                    :cy="root.y"
+                    :fill="colors.yellow"
+                    fill-opacity="1"
+                />
+                <!-- Root background -->
+                <circle
+                    v-for="root in group.roots"
+                    :r="root.r * (root.active ? 1 : 2)"
+                    :cx="root.x"
+                    :cy="root.y"
+                    :fill="colors.bg"
+                />
+                <!-- Root -->
+                <circle
+                    v-for="root in group.roots"
+                    :r="root.r"
+                    :cx="root.x"
+                    :cy="root.y"
+                    :fill="group.color"
+                    :fill-opacity="root.primitive ? 1 : 0.05"
+                    :stroke="colors.black"
+                    stroke-width="2"
+                />
+                <!-- Root label -->
+                <text
+                    v-for="root in group.roots"
+                    :x="root.xLabel"
+                    :y="root.yLabel"
+                    :fill="colors.black"
+                    :text-anchor="root.textAnchor"
+                    dy="4px">
+                    w{{ root.k }}
+                </text>
+            </g>
+        </svg>
+    </div>
+    <script src="https://unpkg.com/vue@next"></script>
+    <script>
+        const RootsOfUnity = {
+            data() {
+                return {
+                    newGroup: '',
+                    savedGroups: (JSON.parse(window.localStorage.getItem('groups')) || [2, 5, 10]),
+                    width: 0,
+                    height: 0,
+                    xCenter: 0,
+                    yCenter: 0,
+                    mouseAngle: 0,
+                    groupSize: 80,
+                    rootSize: 8,
+                    colors: {
+                        bg: 'rgb(245, 245, 220)',
+                        red: 'rgb(255, 10, 10)',
+                        blue: 'rgb(0, 10, 255)',
+                        green: 'rgb(100, 195, 45)',
+                        yellow: 'rgb(255, 220, 10)',
+                        black: 'rgb(10, 10, 10)',
+                        white: 'rgb(245, 245, 245)',
+                    },
+                }
+            },
+            computed: {
+                groups() {
+                    return this.savedGroups.sort((x, y) => x - y).map((n, groupIndex) => {
+                        const group = {
+                            n,
+                            r: this.groupSize + this.groupSize * groupIndex,
+                            angle: Math.PI * 2 / n,
+                            color: [this.colors.green, this.colors.red, this.colors.blue, this.colors.yellow][groupIndex % 4],
+                        };
+                        group.roots = Array.from(Array(n).keys()).map(root => {
+                            const angle = group.angle * root
+                            const x = r => this.xCenter + r * Math.cos(-angle)
+                            const y = r => this.yCenter + r * Math.sin(-angle)
+                            const textAnchor = {1: 'start', 2: 'end', 3: 'end', 4: 'start'}[getQuadrant(angle)]
+                            return {
+                                angle,
+                                k: root,
+                                primitive: mcd(root, group.n) == 1,
+                                r: this.rootSize,
+                                x: x(group.r),
+                                y: y(group.r),
+                                xLabel: x(group.r + this.rootSize * 2.5),
+                                yLabel: y(group.r + this.rootSize * 2.5),
+                                textAnchor,
+                            };
+                        });
+                        return group
+                    })
+                },
+            },
+            methods: {
+                saveData() {
+                    window.localStorage.setItem('groups', JSON.stringify(this.savedGroups))
+                },
+                onSubmit() {
+                    const n = parseInt(this.newGroup)
+                    if (n) {
+                        this.savedGroups.push(n)
+                        this.newGroup = ''
+                        this.saveData()
+                    }
+                },
+                onRemoveGroup(index) {
+                    this.savedGroups.splice(index, 1)
+                    this.saveData()
+                },
+                onMousemove(event) {
+                    this.mouseAngle = Math.atan2(event.y - this.yCenter, event.x - this.xCenter)
+                },
+            },
+            mounted() {
+                this.width = window.innerWidth
+                this.height = window.innerHeight
+                this.xCenter = this.width * 0.5
+                this.yCenter = this.height * 0.5
+            },
+        }
+
+        Vue.createApp(RootsOfUnity).mount('#root')
+
+        function mcd(a, b) {
+            if (b === 0) return Math.abs(a)
+            return mcd(b, a % b)
+        }
+
+        function getQuadrant(angle) {
+            if (angle <= Math.PI * 0.5) return 1
+            if (angle > Math.PI * 0.5 && angle <= Math.PI) return 2
+            if (angle > Math.PI && angle <= Math.PI * 1.5) return 3
+            return 4
+        }
+    </script>
+</body>
+</html>
